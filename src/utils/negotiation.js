@@ -12,12 +12,47 @@ const scenarios = require('../../config/scenarios.json');
 
 const sessions = new Map();
 
+// 載入時檢查每個 scenario 的不變量：internalMax 必須 >= candidateFloor，
+// 否則 clampOffer 的天花板永遠低於 endNegotiation 的成交門檻，
+// 那個職位不管談得多好都只能拿到 walked_away。
+// 寧可在啟動時就失敗，也不要讓使用者談完六回合才發現這場不可能成交。
+for (const [id, sc] of Object.entries(scenarios)) {
+  if (!(sc.internalMax >= sc.candidateFloor)) {
+    throw new Error(
+      `scenario "${id}" 設定錯誤：internalMax (${sc.internalMax}) ` +
+      `低於 candidateFloor (${sc.candidateFloor})，這個職位永遠無法達成共識。`
+    );
+  }
+}
+
 // 談判結束的原因（§23 提前結束條件）
 const OUTCOME = {
   AGREEMENT: 'agreement',
   ROUNDS_EXHAUSTED: 'rounds_exhausted',
   WALKED_AWAY: 'walked_away'
 };
+
+/**
+ * 送給瀏覽器的 scenario 清單。
+ *
+ * 白名單逐欄位列舉，絕不 res.json(scenarios) 或用 delete / spread 排除法：
+ * 白名單漏掉欄位只是少顯示一個東西，黑名單漏掉欄位就是把 internalMax
+ * 一次全部送到瀏覽器。這裡刻意不包含 internalMax 與 concessions。
+ */
+function listScenarios() {
+  return Object.values(scenarios).map(sc => ({
+    id: sc.id,
+    name: sc.name,
+    role: sc.role,
+    avatarRole: sc.avatarRole,
+    currency: sc.currency,
+    initialOffer: sc.initialOffer,
+    candidateTarget: sc.candidateTarget,
+    candidateFloor: sc.candidateFloor,
+    maxRounds: sc.maxRounds,
+    briefing: sc.briefing
+  }));
+}
 
 function getScenario(scenarioId) {
   return scenarios[scenarioId] || null;
@@ -97,6 +132,7 @@ function toClient(session) {
 module.exports = {
   OUTCOME,
   getScenario,
+  listScenarios,
   createNegotiation,
   getNegotiation,
   toClient,

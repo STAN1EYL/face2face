@@ -101,7 +101,7 @@ function buildSystemPrompt(session, scenario) {
     .map(([key, c]) => `- ${key}（${c.label}）：${session.concessions[key] ? '已提供' : '尚未提供'}`)
     .join('\n');
 
-  return `你正在扮演一家科技公司的 HR / Hiring Manager，與一位應徵 ${scenario.role} 的求職者進行薪資談判。全程使用繁體中文。
+  return `你正在扮演 ${scenario.avatarRole}，與一位 ${scenario.role} 進行條件談判。全程使用繁體中文。
 
 ## 你的角色設定
 專業、冷靜、立場堅定，但不敵對，反應要真實。你不是來刁難對方的，你有實際的預算限制。

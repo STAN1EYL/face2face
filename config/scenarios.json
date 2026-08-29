@@ -1,9 +1,9 @@
 {
   "salary-junior-swe": {
     "id": "salary-junior-swe",
-    "name": "薪資談判 — Junior Software Engineer",
+    "name": "Junior Software Engineer",
     "role": "Junior Software Engineer",
-    "avatarRole": "HR / Hiring Manager",
+    "avatarRole": "HR Manager",
     "currency": "NT$",
     "initialOffer": 45000,
     "candidateTarget": 55000,
@@ -11,10 +11,22 @@
     "internalMax": 52000,
     "maxRounds": 6,
     "concessions": {
-      "signingBonus": { "label": "簽約金", "cost": 1 },
-      "remoteDays": { "label": "遠距工作天數", "cost": 1 },
-      "extraLeave": { "label": "額外年假", "cost": 1 },
-      "probationReview": { "label": "提前試用期考核 / 調薪", "cost": 2 }
+      "signingBonus": {
+        "label": "簽約金",
+        "cost": 1
+      },
+      "remoteDays": {
+        "label": "遠距工作天數",
+        "cost": 1
+      },
+      "extraLeave": {
+        "label": "額外年假",
+        "cost": 1
+      },
+      "probationReview": {
+        "label": "提前試用期考核 / 調薪",
+        "cost": 2
+      }
     },
     "briefing": {
       "title": "薪資談判：Junior Software Engineer",
@@ -22,6 +34,121 @@
       "yourGoal": "目標月薪 NT$55,000，可接受的底線是 NT$50,000。",
       "openingOffer": "對方初次開價 NT$45,000。",
       "rounds": "最多 6 回合。"
-    }
+    },
+    "opening": "你好，很高興今天能和你談這個 {role} 的職位。根據你的經驗與我們目前的職級規劃，我們可以提供的起薪是每月 {currency}{offer}。想聽聽你的想法。"
+  },
+  "salary-senior-swe": {
+    "id": "salary-senior-swe",
+    "name": "Senior Software Engineer",
+    "role": "Senior Software Engineer",
+    "avatarRole": "Engineering Director",
+    "currency": "NT$",
+    "initialOffer": 85000,
+    "candidateTarget": 110000,
+    "candidateFloor": 95000,
+    "internalMax": 105000,
+    "maxRounds": 6,
+    "concessions": {
+      "signingBonus": {
+        "label": "簽約金",
+        "cost": 1
+      },
+      "equity": {
+        "label": "股票 / 認股權",
+        "cost": 2
+      },
+      "remoteDays": {
+        "label": "遠距工作天數",
+        "cost": 1
+      },
+      "techLead": {
+        "label": "技術主導職責",
+        "cost": 2
+      }
+    },
+    "briefing": {
+      "title": "薪資談判：Senior Software Engineer",
+      "context": "你有 7 年後端經驗，正在與工程總監談這個資深職位的條件。",
+      "yourGoal": "目標月薪 NT$110,000，可接受的底線是 NT$95,000。",
+      "openingOffer": "對方初次開價 NT$85,000。",
+      "rounds": "最多 6 回合。"
+    },
+    "opening": "謝謝你今天過來。你的背景我看過了，很紮實。這個 {role} 的職缺，我們目前規劃的起薪是每月 {currency}{offer}。先聽你的想法，我們再一起看怎麼調整。"
+  },
+  "salary-product-manager": {
+    "id": "salary-product-manager",
+    "name": "Product Manager",
+    "role": "Product Manager",
+    "avatarRole": "VP of Product",
+    "currency": "NT$",
+    "initialOffer": 70000,
+    "candidateTarget": 90000,
+    "candidateFloor": 78000,
+    "internalMax": 86000,
+    "maxRounds": 6,
+    "concessions": {
+      "signingBonus": {
+        "label": "簽約金",
+        "cost": 1
+      },
+      "bonusTarget": {
+        "label": "提高年終目標",
+        "cost": 2
+      },
+      "headcount": {
+        "label": "團隊人力配置",
+        "cost": 2
+      },
+      "titleUpgrade": {
+        "label": "職稱升級",
+        "cost": 1
+      }
+    },
+    "briefing": {
+      "title": "薪資談判：Product Manager",
+      "context": "你正在與產品副總談一個 PM 職位，對方重視你能否獨立帶產品線。",
+      "yourGoal": "目標月薪 NT$90,000，可接受的底線是 NT$78,000。",
+      "openingOffer": "對方初次開價 NT$70,000。",
+      "rounds": "最多 6 回合。"
+    },
+    "opening": "很高興跟你聊這個 {role} 的職位。以你的產品經驗來說，我們初步規劃的起薪是每月 {currency}{offer}。這個數字還有討論空間，先聽你的想法。"
+  },
+  "freelance-project-quote": {
+    "id": "freelance-project-quote",
+    "name": "接案報價（網站專案）",
+    "role": "自由接案工程師",
+    "avatarRole": "客戶方採購窗口",
+    "currency": "NT$",
+    "initialOffer": 120000,
+    "candidateTarget": 200000,
+    "candidateFloor": 160000,
+    "internalMax": 180000,
+    "maxRounds": 5,
+    "concessions": {
+      "milestonePayment": {
+        "label": "分期付款條件",
+        "cost": 1
+      },
+      "scopeReduction": {
+        "label": "縮減專案範圍",
+        "cost": 2
+      },
+      "maintenanceContract": {
+        "label": "後續維護合約",
+        "cost": 2
+      },
+      "deadlineExtension": {
+        "label": "延長交付期限",
+        "cost": 1
+      }
+    },
+    "briefing": {
+      "title": "接案報價：企業形象網站",
+      "context": "客戶請你報價一個企業形象網站，對方採購窗口要壓預算。",
+      "yourGoal": "目標報價 NT$200,000，可接受的底線是 NT$160,000。",
+      "openingOffer": "對方初次出價 NT$120,000。",
+      "rounds": "最多 5 回合。"
+    },
+    "opening": "謝謝你提案。這個網站專案我們這邊抓的預算是 {currency}{offer}，是一次性的專案金額。你那邊的報價和考量是什麼？"
   }
 }

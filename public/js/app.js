@@ -22,6 +22,7 @@ const launchBtn = document.getElementById('launchBtn');
 const launchOverlay = document.getElementById('launchOverlay');
 const testSpeechBtn = document.getElementById('testSpeechBtn');
 const startBtn = document.getElementById('startBtn');
+const scenarioSelect = document.getElementById('scenarioSelect');
 const scenarioTitle = document.getElementById('scenarioTitle');
 const briefing = document.getElementById('briefing');
 const stats = document.getElementById('stats');
@@ -119,6 +120,36 @@ async function preload() {
   if (!selectedAvatarId || !selectedSceneId || !selectedVoiceId) {
     throw new Error('Avatar / Scene / Voice 設定不完整');
   }
+
+  await loadScenarios();
+}
+
+/**
+ * 載入可選情境。清單來自 server 的白名單投影，
+ * 前端只認 id，不自行保存任何談判參數。
+ */
+async function loadScenarios() {
+  const data = await fetchJson('/api/negotiation/scenarios');
+  const items = data.items ?? [];
+
+  scenarioSelect.innerHTML = '';
+  for (const item of items) {
+    const opt = document.createElement('option');
+    opt.value = item.id;
+    // 情境名稱來自設定檔，仍以 textContent 寫入，不走 innerHTML
+    opt.textContent = `${item.name}（${item.currency}${item.initialOffer.toLocaleString('zh-TW')} 起）`;
+    scenarioSelect.appendChild(opt);
+  }
+
+  if (items.length > 0) {
+    scenarioSelect.value = items[0].id;
+    scenarioSelect.disabled = false;
+  } else {
+    // 沒有可選情境時說清楚，不要留一個空選單讓人以為壞了
+    const opt = document.createElement('option');
+    opt.textContent = '沒有可用的情境';
+    scenarioSelect.appendChild(opt);
+  }
 }
 
 function loadPresenterScript(url) {
@@ -195,10 +226,13 @@ async function startNegotiation() {
   startBtn.textContent = '開始中...';
 
   try {
+    // 沒選時傳 undefined，由 server 用預設情境，不要讓沒選就壞掉
+    const scenarioId = scenarioSelect.value || undefined;
+
     const data = await fetchJson('/api/negotiation/start', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({})
+      body: JSON.stringify({ scenarioId })
     });
 
     scenarioTitle.textContent = data.briefing.title;
@@ -219,6 +253,8 @@ async function startNegotiation() {
     userInput.focus();
     startBtn.textContent = '重新開始';
     startBtn.disabled = false;
+    // 談判進行中不可換情境：換了會與 server 上那場 session 不一致
+    scenarioSelect.disabled = true;
 
     await speak(data.reply);
   } catch (error) {
@@ -253,6 +289,7 @@ async function sendResponse(message) {
 
     if (data.state.ended) {
       setInputEnabled(false);
+      scenarioSelect.disabled = false;   // 談完可以換下一個情境
       if (data.report) {
         renderReport(data.report);
       } else if (data.reportPending) {
@@ -416,6 +453,10 @@ presenter.addEventListener('PRESENTER_STATUS', (e) => {
   status.textContent = STATUS_LABEL[presenterStatus] || presenterStatus;
   testSpeechBtn.disabled = !isReady;
   startBtn.disabled = !isReady;
+  // 選單只在「還沒開始談判」或「已談完」時可用
+  if (isReady && (!negotiation || negotiation.ended)) {
+    scenarioSelect.disabled = false;
+  }
 });
 
 presenter.addEventListener('CONNECT_KEY_REJECTED', () => {

@@ -11,6 +11,7 @@ const router = express.Router();
 const {
   OUTCOME,
   getScenario,
+  listScenarios,
   createNegotiation,
   getNegotiation,
   toClient
@@ -44,6 +45,13 @@ function endNegotiation(session, reason) {
   }
 }
 
+// GET /api/negotiation/scenarios
+// 回傳可選職位清單。走 listScenarios() 的白名單投影，
+// 絕不直接吐 scenarios 物件 —— 那會把每個職位的 internalMax 一次送進瀏覽器。
+router.get('/negotiation/scenarios', (req, res) => {
+  res.json({ items: listScenarios() });
+});
+
 // POST /api/negotiation/start
 // 開場不呼叫 LLM：opening offer 是 scenario 寫死的條件，
 // 這樣即使 LLM 尚未設定，Avatar 也能先把場景說出來。
@@ -53,9 +61,12 @@ router.post('/negotiation/start', (req, res) => {
     const session = createNegotiation(scenarioId || 'salary-junior-swe');
     const scenario = getScenario(session.scenarioId);
 
-    const opening = `你好，很高興今天能和你談這個 ${scenario.role} 的職位。` +
-      `根據你的經驗與我們目前的職級規劃，我們可以提供的起薪是每月 ` +
-      `${scenario.currency}${scenario.initialOffer}。想聽聽你的想法。`;
+    // 開場白由情境自帶：求職與接案的用語不同（「起薪／每月」對接案是錯的），
+    // 寫死在這裡的話，每加一個非求職情境就會講出不合場景的話。
+    const opening = (scenario.opening || '')
+      .replace('{role}', scenario.role)
+      .replace('{currency}', scenario.currency)
+      .replace('{offer}', String(scenario.initialOffer));
 
     session.history.push({ role: 'assistant', content: opening });
 
