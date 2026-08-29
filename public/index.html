@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Perxona AI Assistant</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🤖 Perxona AI Assistant</h1>
+    </header>
+
+    <main>
+      <div class="avatar-section">
+        <div class="presenter-stage">
+          <sv-presenter
+            id="presenter"
+            style="width: 100%; height: 400px;">
+          </sv-presenter>
+          <div class="launch-overlay" id="launchOverlay">
+            <button type="button" id="launchBtn" disabled>準備中...</button>
+            <p class="launch-hint">瀏覽器需要一次點擊才能解鎖語音播放</p>
+          </div>
+        </div>
+        <div class="status" id="status">載入中...</div>
+        <!-- Handbook §19：Ready 後先不接 LLM，只測固定語句 -->
+        <div class="speech-test">
+          <button type="button" id="testSpeechBtn" disabled>🔊 測試固定語句</button>
+        </div>
+      </div>
+
+      <div class="chat-section">
+        <div class="messages" id="messages">
+          <div class="message bot">
+            <div class="message-content">你好！我是 Perxona AI 助手，請問有什麼可以幫助你的嗎？</div>
+          </div>
+        </div>
+
+        <form class="input-form" id="chatForm">
+          <input type="text" id="userInput" placeholder="輸入訊息..." autocomplete="off" required>
+          <button type="submit" id="sendBtn">送出</button>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/app.js" type="module"></script>
+</body>
+</html>

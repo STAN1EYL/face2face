@@ -1,0 +1,12 @@
+{
+  "server": {
+    "port": 3000
+  },
+  "perxona": {
+    "region": "asia",
+    "baseUrl": "https://console.perxona.ai/asia/api/v1/connect",
+    "defaultAvatarId": "01KVQ59VW18PC6P2HQET51NMYS",
+    "defaultVoiceId": "01KXFXEVFKN6FDHC74PDDK4NS2",
+    "defaultSceneId": "01KWVBXE9Q9CZ9FENATQHZYXJV"
+  }
+}

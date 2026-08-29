@@ -1,0 +1,20 @@
+{
+  "name": "perxona-assistant",
+  "version": "1.0.0",
+  "description": "Perxona AI Assistant - OpenAI + Azure TTS + Perxona Avatar",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": ["perxona", "ai", "assistant", "openai", "tts"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "openai": "^4.28.0",
+    "dotenv": "^16.4.1",
+    "axios": "^1.6.7",
+    "uuid": "^9.0.1"
+  }
+}
