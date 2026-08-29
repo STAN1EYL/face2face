@@ -119,7 +119,13 @@ router.get('/avatars', async (req, res) => {
 // Motion ID 不在該 avatar 的 catalog 裡就不會播，所以絕不自行發明。
 router.get('/avatars/:avatarId/motions', async (req, res) => {
   try {
-    const data = await getAvatarMotions(req.params.avatarId);
+    // 轉發分頁參數。不轉發的話一律吃 API 預設頁大小，
+    // motion 多的 avatar 超出第一頁的 pose 就查不到，
+    // 而「查不到就不播」會讓那些 reaction 靜默失效。
+    const data = await getAvatarMotions(req.params.avatarId, {
+      page: req.query.page,
+      size: req.query.size
+    });
     res.json(data);
   } catch (error) {
     console.error('Error fetching motions:', error.message);

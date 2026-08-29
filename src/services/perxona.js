@@ -58,9 +58,12 @@ async function getAvatar(avatarId) {
  * 取得 Avatar 可用的 motions
  * GET /assets/avatars/{avatar_id}/motions
  */
-async function getAvatarMotions(avatarId) {
+async function getAvatarMotions(avatarId, { page, size } = {}) {
   const client = createClient();
-  const response = await client.get(`/assets/avatars/${avatarId}/motions`);
+  const params = {};
+  if (page !== undefined) params.page = page;
+  if (size !== undefined) params.size = size;
+  const response = await client.get(`/assets/avatars/${avatarId}/motions`, { params });
   return response.data;
 }
 

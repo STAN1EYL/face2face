@@ -141,7 +141,18 @@ async function loadMotions() {
         motionByPose[pose.slice('pose:'.length)] = m.motion_id;
       }
     }
+    const loaded = Object.keys(motionByPose).length;
     console.log('Motion catalog:', Object.keys(motionByPose).join(', ') || '(空)');
+
+    // 只載到第一頁時要說出來：沒說的話，超出的 pose 會因為
+    // 「查不到就不播」而靜默失效，看起來像是那個 reaction 沒有動作。
+    const total = data.total;
+    if (typeof total === 'number' && total > (data.items?.length ?? 0)) {
+      console.warn(
+        `Motion 清單只載入 ${data.items?.length ?? 0} / ${total} 個，` +
+        '超出的 pose 將無對應動作。'
+      );
+    }
   } catch (error) {
     // 沒有 motion 只是少了表情動作，不該讓整個 Avatar 起不來
     console.warn('Motion 清單取得失敗，將不播放動作:', error.message);
@@ -158,7 +169,7 @@ const REACTION_POSES = {
   neutral:   ['idle_01', 'talking_01']
 };
 
-function resolveeMotion(reaction) {
+function resolveMotion(reaction) {
   for (const pose of REACTION_POSES[reaction] ?? []) {
     if (motionByPose[pose]) return { pose, motionId: motionByPose[pose] };
   }
@@ -169,9 +180,13 @@ function resolveeMotion(reaction) {
  * 播放 reaction 對應的動作。與語音佇列獨立，不 await 說話。
  */
 async function playReaction(reaction) {
-  const resolved = resolveMotion(reaction);
-  if (!resolved) return;
+  // 兩個呼叫點都是 fire-and-forget（沒有 await、也沒有 .catch），
+  // 所以這裡面任何未捕捉的錯誤都會變成 unhandled rejection：
+  // 表徵是「Motion 完全不動、console 也沒有任何 warn」。
+  // 因此整個函式體都包在 try 內，解析與播放都不例外。
   try {
+    const resolved = resolveMotion(reaction);
+    if (!resolved) return;
     const result = await presenter.playMotion(resolved.motionId);
     if (result && result.success === false) {
       console.warn('playMotion 失敗:', resolved.pose, result.code, result.message);
