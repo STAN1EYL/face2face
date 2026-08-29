@@ -56,9 +56,51 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+// 部署版可能要求存取碼。這不是身分驗證，只是避免連結被隨手轉傳後
+// 有人把額度打光；所有人共用同一組碼。
+const ACCESS_CODE_KEY = 'perxona.demo.code';
+
+function storedAccessCode() {
+  try {
+    return localStorage.getItem(ACCESS_CODE_KEY) || '';
+  } catch {
+    // 隱私模式下 localStorage 會丟例外，退回這次 session 用就好
+    return '';
+  }
+}
+
+function rememberAccessCode(code) {
+  try {
+    localStorage.setItem(ACCESS_CODE_KEY, code);
+  } catch {
+    /* 存不起來不影響這次使用 */
+  }
+}
+
+function promptAccessCode(message = '請輸入存取碼') {
+  const code = window.prompt(message);
+  if (code) rememberAccessCode(code.trim());
+  return code ? code.trim() : '';
+}
+
 async function fetchJson(url, options) {
-  const res = await fetch(url, options);
+  const code = storedAccessCode();
+  const opts = code
+    ? { ...options, headers: { ...(options?.headers ?? {}), 'x-demo-code': code } }
+    : options;
+  const res = await fetch(url, opts);
   const data = await res.json().catch(() => null);
+
+  // 存取碼錯或未提供：問一次再重試。只重試一次，避免碼一直錯時無限迴圈。
+  if (res.status === 401 && data?.code === 'ACCESS_CODE_REQUIRED' && !options?._retried) {
+    const entered = promptAccessCode(
+      code ? '存取碼不正確，請重新輸入' : '這個示範需要存取碼'
+    );
+    if (entered) {
+      return fetchJson(url, { ...options, _retried: true });
+    }
+  }
+
   if (!res.ok) {
     const error = new Error(data?.error || `${url} 回傳 ${res.status}`);
     error.status = res.status;
@@ -424,6 +466,9 @@ async function sendResponse(message) {
     } else if (error.status === 502) {
       showError('AI 回應格式不正確，這一輪沒有生效，請換個說法再說一次。');
       setInputEnabled(true);
+    } else if (error.status === 429) {
+      showError(error.message);
+      setInputEnabled(true);
     } else if (error.status === 409) {
       showError('這場談判已經結束了，請按「重新開始」。');
       setInputEnabled(false);
@@ -602,6 +647,16 @@ testSpeechBtn.addEventListener('click', async () => {
   } catch {
     showError('無法連接到伺服器');
     return;
+  }
+
+  // 先問設定檔要不要碼，避免第一個需要碼的請求才跳出提示
+  try {
+    const cfg = await fetchJson('/api/config');
+    if (cfg.accessCodeRequired && !storedAccessCode()) {
+      promptAccessCode('這個示範需要存取碼');
+    }
+  } catch {
+    /* 設定拿不到時交給 preload 的錯誤處理 */
   }
 
   try {

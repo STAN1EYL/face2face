@@ -5,8 +5,13 @@ const config = require('./config/default.json');
 
 const app = express();
 
+// 部署在 Render 之後 req.ip 會是 proxy 的位址；沒有這行的話
+// 每個 IP 的流量限制會變成全站共用一個額度。
+app.set('trust proxy', 1);
+
 // Middleware
-app.use(express.json());
+// 談判訊息本來就有 1000 字上限，body 再大就是濫用
+app.use(express.json({ limit: '32kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Routes - Perxona Connect API (遵循 Handbook 規範)

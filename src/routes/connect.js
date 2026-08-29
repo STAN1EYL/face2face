@@ -15,6 +15,7 @@ const {
   getPublishableKey
 } = require('../services/perxona');
 const config = require('../../config/default.json');
+const { rateLimit, accessGate, accessCodeRequired } = require('../middleware/guard');
 
 // ── Region ────────────────────────────────────────────────────
 // 官方 samples/express/.env.example：Presenter engine 的 CDN URL 是
@@ -82,11 +83,12 @@ router.get('/config', (req, res) => {
   res.set({ 'Cache-Control': 'no-store', Pragma: 'no-cache' });
   res.json({
     presenterUrl: PRESENTER_URL,
-    region: REGION
+    region: REGION,
+    accessCodeRequired: accessCodeRequired()
   });
 });
 
-router.get('/connect-key', (req, res) => {
+router.get('/connect-key', accessGate(), rateLimit('session'), (req, res) => {
   res.set({ 'Cache-Control': 'no-store', Pragma: 'no-cache' });
   const publishableKey = getPublishableKey();
 
@@ -99,7 +101,7 @@ router.get('/connect-key', (req, res) => {
   res.json({ connectKey: publishableKey });
 });
 
-router.get('/avatars', async (req, res) => {
+router.get('/avatars', rateLimit('catalog'), async (req, res) => {
   try {
     if (cache.avatars && isCacheValid()) {
       return res.json(cache.avatars);
@@ -117,7 +119,7 @@ router.get('/avatars', async (req, res) => {
 // GET /api/avatars/:avatarId/motions
 // §24：reaction 要映射到 Motion ID 時，只能用這支拿到的清單。
 // Motion ID 不在該 avatar 的 catalog 裡就不會播，所以絕不自行發明。
-router.get('/avatars/:avatarId/motions', async (req, res) => {
+router.get('/avatars/:avatarId/motions', rateLimit('catalog'), async (req, res) => {
   try {
     // 轉發分頁參數。不轉發的話一律吃 API 預設頁大小，
     // motion 多的 avatar 超出第一頁的 pose 就查不到，
@@ -133,7 +135,7 @@ router.get('/avatars/:avatarId/motions', async (req, res) => {
   }
 });
 
-router.get('/scenes', async (req, res) => {
+router.get('/scenes', rateLimit('catalog'), async (req, res) => {
   try {
     if (cache.scenes && isCacheValid()) {
       return res.json(cache.scenes);
@@ -148,7 +150,7 @@ router.get('/scenes', async (req, res) => {
   }
 });
 
-router.get('/voices', async (req, res) => {
+router.get('/voices', rateLimit('catalog'), async (req, res) => {
   try {
     if (cache.voices && isCacheValid()) {
       return res.json(cache.voices);
@@ -163,7 +165,7 @@ router.get('/voices', async (req, res) => {
   }
 });
 
-router.get('/chatbots', async (req, res) => {
+router.get('/chatbots', rateLimit('catalog'), async (req, res) => {
   try {
     const data = await getChatbots();
     res.json(data);
@@ -173,7 +175,7 @@ router.get('/chatbots', async (req, res) => {
   }
 });
 
-router.post('/presentation', async (req, res) => {
+router.post('/presentation', accessGate(), rateLimit('presentation'), async (req, res) => {
   try {
     const { avatar_id, message, voice_id, emotion, intensity } = req.body;
     if (!avatar_id) {
@@ -196,7 +198,7 @@ router.post('/presentation', async (req, res) => {
   }
 });
 
-router.post('/chat', async (req, res) => {
+router.post('/chat', accessGate(), rateLimit('presentation'), async (req, res) => {
   try {
     const { message, avatar_id, voice_id, sessionId } = req.body;
     if (!message || message.trim() === '') {

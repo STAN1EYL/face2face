@@ -1,13 +1,19 @@
 {
-  "name": "perxona-assistant",
+  "name": "face2face",
   "version": "1.0.0",
-  "description": "Perxona AI Assistant - OpenAI + Azure TTS + Perxona Avatar",
+  "description": "Face2Face — AI Negotiation Coach（Perxona Connect avatar + LLM 談判引擎）",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js"
   },
-  "keywords": ["perxona", "ai", "assistant", "openai", "tts"],
+  "keywords": [
+    "perxona",
+    "avatar",
+    "negotiation",
+    "coaching",
+    "llm"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
@@ -16,5 +22,8 @@
     "dotenv": "^16.4.1",
     "axios": "^1.6.7",
     "uuid": "^9.0.1"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

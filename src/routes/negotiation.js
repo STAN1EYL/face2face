@@ -19,6 +19,11 @@ const {
 } = require('../utils/negotiation');
 const { negotiate, LLMError } = require('../services/llm');
 const { buildReport } = require('../services/scoring');
+const { rateLimit, accessGate } = require('../middleware/guard');
+
+// 這兩支會燒 OpenAI 額度，是全站最貴的路徑
+const guardSession = [accessGate(), rateLimit('session')];
+const guardLlm = [accessGate(), rateLimit('llm')];
 
 const MAX_MESSAGE_LENGTH = 1000;
 
@@ -67,14 +72,14 @@ function endNegotiation(session, reason) {
 // GET /api/negotiation/scenarios
 // 回傳可選職位清單。走 listScenarios() 的白名單投影，
 // 絕不直接吐 scenarios 物件 —— 那會把每個職位的 internalLimit 一次送進瀏覽器。
-router.get('/negotiation/scenarios', (req, res) => {
+router.get('/negotiation/scenarios', rateLimit('catalog'), (req, res) => {
   res.json({ items: listScenarios() });
 });
 
 // POST /api/negotiation/start
 // 開場不呼叫 LLM：opening offer 是 scenario 寫死的條件，
 // 這樣即使 LLM 尚未設定，Avatar 也能先把場景說出來。
-router.post('/negotiation/start', (req, res) => {
+router.post('/negotiation/start', guardSession, (req, res) => {
   try {
     const { scenarioId, custom } = req.body || {};
     // custom 存在時走自訂情境：授權極限由 server 從目標與底線推導，
@@ -104,7 +109,7 @@ router.post('/negotiation/start', (req, res) => {
 });
 
 // POST /api/negotiation/respond
-router.post('/negotiation/respond', async (req, res) => {
+router.post('/negotiation/respond', guardLlm, async (req, res) => {
   try {
     const { sessionId, message } = req.body || {};
 

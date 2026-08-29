@@ -1,0 +1,38 @@
+# Render Blueprint — MASTER_PLAN §30
+#
+# secrets 一律在 Render 儀表板設定，不進版控（.env 已被 .gitignore 擋住）。
+# 部署後還要做兩件儀表板上的事：
+#   1. Perxona Console：Publishable Key 的 Allowed Domains 加上這個網域，
+#      否則 Presenter 會在瀏覽器裡被拒（症狀是 CONNECT_KEY_REJECTED）。
+#   2. PERXONA_API_BASE_URL 的 region 要與帳號一致；Presenter 的 CDN URL
+#      由它推導，兩者不一致就是 401。
+services:
+  - type: web
+    name: face2face
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: node server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      # ── 必填：部署後在儀表板填入 ──
+      - key: PERXONA_API_BASE_URL
+        sync: false
+      - key: PERXONA_CONNECT_SECRET_KEY
+        sync: false
+      - key: PERXONA_CONNECT_PUBLISHABLE_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      # ── 選填 ──
+      # 設了才會啟用存取碼閘門。公開連結建議設，否則任何人都能燒額度。
+      - key: DEMO_ACCESS_CODE
+        sync: false
+      - key: LLM_MODEL
+        value: gpt-4o-mini
+      - key: DAILY_LLM_LIMIT
+        value: 600
+      - key: DAILY_PRESENTATION_LIMIT
+        value: 400
