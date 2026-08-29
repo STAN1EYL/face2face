@@ -15,6 +15,51 @@ const {
 } = require('../services/perxona');
 const config = require('../../config/default.json');
 
+// ── Region ────────────────────────────────────────────────────
+// 官方 samples/express/.env.example：Presenter engine 的 CDN URL 是
+// region-specific，必須與 PERXONA_API_BASE_URL 的 region 一致。
+//   https://cdn.perxona.ai/asia/prod/latest/widget/entry/presenter.js
+// 省略 region 段會落到 region-neutral engine，實測會去打 /eu/api/ → 401。
+// 「Leaving them mismatched is the one combination that looks configured
+//   and is not.」— 官方原文
+// 因此這裡只從 PERXONA_API_BASE_URL 取出 region 段，再組出 Presenter URL，
+// 讓兩者永遠同源，不會各自漂移。
+const PERXONA_API_BASE_URL = process.env.PERXONA_API_BASE_URL;
+const REGION_MATCH = PERXONA_API_BASE_URL && PERXONA_API_BASE_URL.match(/\/(asia|eu)(?:\/|$)/);
+const REGION = (REGION_MATCH && REGION_MATCH[1]) || 'asia';
+
+if (PERXONA_API_BASE_URL && !REGION_MATCH) {
+  console.warn(
+    `WARNING: PERXONA_API_BASE_URL 中找不到 /asia 或 /eu 區段，region 退回猜測值 "${REGION}"。\n` +
+    '若組織不在該區，請將 PERXONA_API_BASE_URL 指向含正確 region 段的 URL。'
+  );
+}
+
+// 可用 PRESENTER_URL 覆寫（官方同名變數）；未設定時依 region 組出。
+const PRESENTER_URL =
+  process.env.PRESENTER_URL ||
+  `https://cdn.perxona.ai/${REGION}/prod/latest/widget/entry/presenter.js`;
+
+// 覆寫值若帶了不同 region，這正是官方警告的「看起來有設定其實沒有」組合。
+const PRESENTER_REGION_MATCH = PRESENTER_URL.match(/cdn\.perxona\.ai\/(asia|eu)\//);
+if (PRESENTER_REGION_MATCH && PRESENTER_REGION_MATCH[1] !== REGION) {
+  console.warn(
+    `WARNING: PRESENTER_URL 的 region "${PRESENTER_REGION_MATCH[1]}" 與 API region "${REGION}" 不一致，` +
+    'Presenter 會對錯誤的 region 認證並取得 401。'
+  );
+} else if (!PRESENTER_REGION_MATCH) {
+  console.warn(
+    'WARNING: PRESENTER_URL 沒有 region 段，會使用 region-neutral engine，' +
+    '對 Asia 帳號會產生 401。'
+  );
+}
+
+// 啟動自檢：把實際生效的 region 與 Presenter URL 印出來。
+// 這兩個值被改錯時的症狀（瀏覽器 401）離原因很遠，所以在開機當下就攤開，
+// 不要等到 Presenter 在瀏覽器裡失敗才回頭查。
+console.log(`  Region    : ${REGION}`);
+console.log(`  Presenter : ${PRESENTER_URL}`);
+
 // 快取資源清單
 let cache = {
   avatars: null,
@@ -32,18 +77,21 @@ function isCacheValid() {
 
 router.get('/config', (req, res) => {
   res.json({
-    presenterUrl: 'https://cdn.perxona.ai/prod/latest/widget/entry/presenter.js',
-    region: 'asia'
+    presenterUrl: PRESENTER_URL,
+    region: REGION
   });
 });
 
 router.get('/connect-key', (req, res) => {
   const publishableKey = getPublishableKey();
+
   if (!publishableKey) {
-    res.json({ connectKey: process.env.PERXONA_CONNECT_KEY });
-  } else {
-    res.json({ connectKey: publishableKey });
+    return res.status(500).json({
+      error: 'PERXONA_CONNECT_PUBLISHABLE_KEY 未設定'
+    });
   }
+
+  res.json({ connectKey: publishableKey });
 });
 
 router.get('/avatars', async (req, res) => {
