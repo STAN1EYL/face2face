@@ -1,0 +1,27 @@
+{
+  "salary-junior-swe": {
+    "id": "salary-junior-swe",
+    "name": "薪資談判 — Junior Software Engineer",
+    "role": "Junior Software Engineer",
+    "avatarRole": "HR / Hiring Manager",
+    "currency": "NT$",
+    "initialOffer": 45000,
+    "candidateTarget": 55000,
+    "candidateFloor": 50000,
+    "internalMax": 52000,
+    "maxRounds": 6,
+    "concessions": {
+      "signingBonus": { "label": "簽約金", "cost": 1 },
+      "remoteDays": { "label": "遠距工作天數", "cost": 1 },
+      "extraLeave": { "label": "額外年假", "cost": 1 },
+      "probationReview": { "label": "提前試用期考核 / 調薪", "cost": 2 }
+    },
+    "briefing": {
+      "title": "薪資談判：Junior Software Engineer",
+      "context": "你剛通過某科技公司的技術面試，HR 準備與你討論薪資。",
+      "yourGoal": "目標月薪 NT$55,000，可接受的底線是 NT$50,000。",
+      "openingOffer": "對方初次開價 NT$45,000。",
+      "rounds": "最多 6 回合。"
+    }
+  }
+}

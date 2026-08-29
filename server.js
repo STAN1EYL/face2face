@@ -11,6 +11,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Routes - Perxona Connect API (遵循 Handbook 規範)
 app.use('/api', require('./src/routes/connect'));
+// Routes - Face2Face 談判引擎 (MASTER_PLAN §20-25)
+app.use('/api', require('./src/routes/negotiation'));
 
 // Health check
 app.get('/health', (req, res) => {

@@ -154,10 +154,8 @@ async function sendMessage(message) {
         showError(`Avatar 呈現失敗 (${result.code}): ${result.message}`);
       }
     } else {
+      // 清理交給 finally，這裡只標示狀態。
       status.textContent = '尚未啟動 Avatar';
-      isProcessing = false;
-      sendBtn.disabled = false;
-      userInput.value = '';
       return;
     }
 
@@ -246,8 +244,13 @@ testSpeechBtn.addEventListener('click', async () => {
 });
 
 presenter.addEventListener('CONNECT_KEY_REJECTED', () => {
+  // key 被拒沒有 refresh 可退，這是終態：把所有依賴 Ready 的操作一併關掉，
+  // 否則按鈕仍亮著、點了卻因 `if (!isReady) return;` 靜默無反應。
   isReady = false;
-  showError('Connect key 被拒絕，請到 console 重新發放並確認網域限制');
+  testSpeechBtn.disabled = true;
+  sendBtn.disabled = true;
+  status.textContent = 'Connect key 被拒絕';
+  showError('Connect key 被拒絕，請到 Console 重新發放並確認 allowed domains 是否包含目前網域');
 });
 
 // ==================== 啟動 ====================
