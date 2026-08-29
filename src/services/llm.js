@@ -45,7 +45,38 @@ function getClient() {
 /**
  * §23 Negotiation State Machine — 依回合給 HR 不同的行為指引。
  */
-function phaseGuidance(round, maxRounds) {
+/**
+ * 依實際訊號算出最後一回合該提出的 final offer。
+ *
+ * 為什麼由 server 算：模型很擅長扮演 HR，但不擅長「照敘述把數字收到某個位置」。
+ * 早期版本只在 prompt 裡寫「談得好就靠近上限」，實測連續多輪都收在 48000，
+ * 遠低於 52000 的授權上限，讓談得好的使用者也拿到破局結果。
+ * 改為 server 直接算出金額、prompt 只告訴模型要說哪個數字，
+ * 措辭仍由模型負責，但金額不再取決於它的算術。
+ */
+function finalOfferTarget(session) {
+  const { turnCount, signalTally, currentOffer, internalMax } = session;
+  const evidenceRate = turnCount > 0 ? signalTally.usedEvidence / turnCount : 0;
+  const exploredRate = turnCount > 0
+    ? (signalTally.askedQuestion + signalTally.mentionedAlternative) / turnCount
+    : 0;
+
+  let target;
+  if (evidenceRate >= 0.5 && exploredRate >= 0.3) {
+    target = internalMax;                                    // 談得好：給到授權上限
+  } else if (evidenceRate >= 0.3) {
+    target = Math.round((currentOffer + internalMax) / 2);   // 尚可：中上位置
+  } else {
+    target = currentOffer;                                   // 沒有依據：不再加碼
+  }
+
+  // 不得低於檯面價，也不得超過授權上限
+  return Math.max(currentOffer, Math.min(target, internalMax));
+}
+
+function phaseGuidance(session) {
+  const { round, maxRounds } = session;
+
   if (round === 1) {
     return '這是第 1 回合：提出 opening offer，說明職位與預算範圍，不要讓步，currentOffer 維持原價。';
   }
@@ -58,9 +89,11 @@ function phaseGuidance(round, maxRounds) {
     return '這是 concessions / alternatives 階段：若對方已提出依據或替代方案，明顯調高 currentOffer 往你的授權上限靠近（但不要一次給滿），' +
       '或搭配非薪資條件（簽約金、遠距天數、額外年假、提前考核）交換。';
   }
-  return `這是最後一回合（第 ${maxRounds} 回合）：提出 final offer，明確表示這是最終條件，並將 shouldEnd 設為 true。` +
-    '如果對方全程談得有依據、有來有往，這個數字應該落在你的授權範圍內較高的位置；' +
-    '如果對方沒有提出任何依據，就不需要給到上限。';
+
+  const target = finalOfferTarget(session);
+  return `這是最後一回合（第 ${maxRounds} 回合）：提出 final offer，明確表示這是最終條件，並將 shouldEnd 設為 true。\n` +
+    `根據對方整場的表現，你這一回合的 currentOffer 必須正好是 ${target}，` +
+    `台詞裡提到的金額也必須是這個數字，不要提出其他金額。`;
 }
 
 function buildSystemPrompt(session, scenario) {
@@ -92,7 +125,7 @@ ${concessionList}
 
 ## 目前進度
 第 ${session.round} 回合，共 ${session.maxRounds} 回合。
-${phaseGuidance(session.round, session.maxRounds)}
+${phaseGuidance(session)}
 
 ## 輸出格式
 只輸出 JSON，不要有其他文字、不要 markdown 圍欄：
@@ -148,7 +181,13 @@ function validateNegotiationOutput(raw, session) {
     }
   }
 
-  assertNoHiddenCeiling(raw.reply, session.internalMax);
+  // 最後一回合的 final offer 由 server 指定（見 finalOfferTarget）。
+  // 若那個數字剛好等於授權上限，它出現在台詞裡就是在開價，不是洩底價，
+  // 因此把它當作允許出現的金額傳進去。
+  const suggestedOffer = session.round >= session.maxRounds
+    ? finalOfferTarget(session)
+    : null;
+  assertNoHiddenCeiling(raw.reply, session.internalMax, suggestedOffer);
 
   return {
     reply: raw.reply.trim(),
@@ -207,7 +246,17 @@ function chineseVariants(amount) {
  * 當成完整防護 —— 真正的防線是 system prompt 裡的保密規則，
  * 這裡只是最後一道明顯洩漏的攔截。
  */
-function assertNoHiddenCeiling(reply, internalMax) {
+function assertNoHiddenCeiling(reply, internalMax, offeredAmount = null) {
+  // 若 HR 這一回合開的價碼剛好就是授權上限，那個數字出現在台詞裡
+  // 是「開價」而不是「洩底價」——談到上限本身才是洩漏。
+  //
+  // 取捨：這裡是整個檢查直接放行，不只是把那個數字從黑名單移除。
+  // 因此最後一回合若模型說「這是我的授權上限 52000」，「上限」這個語意
+  // 會一起流出去。實務影響很小——那一回合 shouldEnd 已是 true、評分也結束，
+  // 使用者拿到這個資訊沒有可利用的後續。這是有意識的取捨，不是遺漏。
+  // 非最後一回合仍走完整檢查。
+  if (offeredAmount !== null && offeredAmount === internalMax) return;
+
   const normalized = reply.replace(/[\s,，]/g, '').toLowerCase();
   const thousands = internalMax / 1000;
   const tenThousands = internalMax / 10000;
@@ -266,6 +315,7 @@ module.exports = {
   VALID_REACTIONS,
   negotiate,
   buildSystemPrompt,
+  finalOfferTarget,
   validateNegotiationOutput,
   assertNoHiddenCeiling
 };

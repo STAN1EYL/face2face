@@ -76,6 +76,9 @@ function isCacheValid() {
 }
 
 router.get('/config', (req, res) => {
+  // 不可快取：region 改了卻讀到瀏覽器快取的舊 presenterUrl，
+  // 症狀是 Presenter 對錯誤 region 認證並取得 401，離原因很遠。
+  res.set({ 'Cache-Control': 'no-store', Pragma: 'no-cache' });
   res.json({
     presenterUrl: PRESENTER_URL,
     region: REGION
@@ -83,6 +86,7 @@ router.get('/config', (req, res) => {
 });
 
 router.get('/connect-key', (req, res) => {
+  res.set({ 'Cache-Control': 'no-store', Pragma: 'no-cache' });
   const publishableKey = getPublishableKey();
 
   if (!publishableKey) {
