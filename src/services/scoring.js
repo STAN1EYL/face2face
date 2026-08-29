@@ -11,6 +11,7 @@
 
 const OpenAI = require('openai');
 const { LLMError, MODEL } = require('./llm');
+const { scenarioOf } = require('../utils/negotiation');
 
 const WEIGHTS = {
   evidence: 20,
@@ -45,11 +46,19 @@ function computeScores(session) {
   // Evidence：提出市場數據 / 具體成果的比例
   const evidence = WEIGHTS.evidence * ratio(tally.usedEvidence, turns);
 
-  // Positioning：最終 offer 相對於底線與目標的位置
-  const span = session.candidateTarget - session.candidateFloor;
+  // Positioning：最終條件相對於底線與目標的位置。
+  // 'up' 是愈高愈好（談薪、報價），'down' 是愈低愈好（買車、租屋），
+  // 所以「前進了多少」要依方向計算，不能一律用 offer - floor。
+  const span = Math.abs(session.candidateTarget - session.candidateFloor);
+  const progress = session.direction === 'down'
+    ? session.candidateFloor - session.currentOffer
+    : session.currentOffer - session.candidateFloor;
+  const reachedFloor = session.direction === 'down'
+    ? session.currentOffer <= session.candidateFloor
+    : session.currentOffer >= session.candidateFloor;
   const positioningRatio = span > 0
-    ? Math.max(0, Math.min(1, (session.currentOffer - session.candidateFloor) / span))
-    : (session.currentOffer >= session.candidateFloor ? 1 : 0);
+    ? Math.max(0, Math.min(1, progress / span))
+    : (reachedFloor ? 1 : 0);
   const positioning = WEIGHTS.positioning * positioningRatio;
 
   // Discovery：反問 / 探詢的比例
@@ -128,20 +137,26 @@ function validateCoaching(raw) {
 }
 
 /**
- * 產生質性回饋。刻意只送使用者自己的發言給 LLM，
- * 不送 internalMax，也不送 HR 的內部狀態。
+ * 產生質性回饋。
+ *
+ * 送出去的是完整逐字稿（雙方發言都有——教練要看得到對話脈絡），
+ * 但不含 internalLimit，也不含對手的內部狀態與訊號統計原始值。
  */
 async function generateCoaching(session, scores, ranked) {
+  const scenario = scenarioOf(session);
   if (!process.env.OPENAI_API_KEY) {
     throw new LLMError('OPENAI_API_KEY 未設定', 'NO_API_KEY');
   }
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   const transcript = session.history
-    .map(h => `${h.role === 'user' ? '求職者' : 'HR'}：${h.content}`)
+    .map(h => `${h.role === 'user' ? scenario.role : scenario.avatarRole}：${h.content}`)
     .join('\n');
 
-  const prompt = `以下是一場薪資談判練習的逐字稿。求職者的目標月薪 NT$${session.candidateTarget}，底線 NT$${session.candidateFloor}，最終談到 NT$${session.currentOffer}。
+  const goalWord = session.direction === 'down' ? '希望壓到' : '目標';
+  const floorWord = session.direction === 'down' ? '最多可接受' : '底線';
+  const unit = scenario.currency;
+  const prompt = `以下是一場談判練習的逐字稿。使用者的身分是${scenario.role}，對手是${scenario.avatarRole}。使用者的${goalWord} ${unit}${session.candidateTarget}，${floorWord} ${unit}${session.candidateFloor}，最終談到 ${unit}${session.currentOffer}。
 
 系統評分：總分 ${scores.total}/100，最強項是「${ranked.strongest.label}」，最弱項是「${ranked.weakest.label}」。
 
@@ -150,7 +165,7 @@ ${transcript}
 
 請以談判教練的身分，用繁體中文只輸出 JSON，不要 markdown 圍欄：
 {
-  "biggestMistake": "求職者最關鍵的一個失誤，具體指出發生在哪句話，1-2 句",
+  "biggestMistake": "使用者最關鍵的一個失誤，具體指出發生在哪句話，1-2 句",
   "tips": ["可立即執行的建議 1", "建議 2", "建議 3"],
   "suggestedBetterResponse": "針對那個失誤，示範一句更好的說法，寫成可以直接照唸的一段話"
 }`;

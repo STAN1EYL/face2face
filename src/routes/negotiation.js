@@ -1,7 +1,7 @@
 /**
  * Face2Face — 談判路由（MASTER_PLAN §20-25）
  *
- * 送出去的東西一律經過 toClient()，internalMax 不會離開這台伺服器。
+ * 送出去的東西一律經過 toClient()，internalLimit 不會離開這台伺服器。
  * offer 金額只由 server 決定：前端從頭到尾沒有機會提供數字。
  */
 
@@ -11,6 +11,7 @@ const router = express.Router();
 const {
   OUTCOME,
   getScenario,
+  scenarioOf,
   listScenarios,
   createNegotiation,
   getNegotiation,
@@ -28,26 +29,44 @@ const MAX_MESSAGE_LENGTH = 1000;
  */
 function clampOffer(suggested, session) {
   if (!Number.isFinite(suggested)) return session.currentOffer;
-  const floor = session.currentOffer;
-  const ceiling = session.internalMax;
-  return Math.max(floor, Math.min(Math.round(suggested), ceiling));
+  const value = Math.round(suggested);
+
+  if (session.direction === 'down') {
+    // 對方從高往下讓：不得高於檯面價（不會把已讓的收回），
+    // 也不得低於授權下限。
+    return Math.min(session.currentOffer, Math.max(value, session.internalLimit));
+  }
+
+  // 'up'：不得低於檯面價，也不得超過授權上限。
+  return Math.max(session.currentOffer, Math.min(value, session.internalLimit));
+}
+
+/**
+ * 是否已達使用者可接受的條件。
+ * 'up'   floor 是最低可接受金額 -> 檯面價要 >= floor
+ * 'down' floor 是最高可接受金額 -> 檯面價要 <= floor
+ */
+function meetsCandidateFloor(session) {
+  return session.direction === 'down'
+    ? session.currentOffer <= session.candidateFloor
+    : session.currentOffer >= session.candidateFloor;
 }
 
 function endNegotiation(session, reason) {
   session.ended = true;
   if (reason === 'rounds') {
     session.outcome = OUTCOME.ROUNDS_EXHAUSTED;
-  } else if (session.currentOffer >= session.candidateFloor) {
+  } else if (meetsCandidateFloor(session)) {
     session.outcome = OUTCOME.AGREEMENT;
   } else {
-    // 談到最後仍低於自己的底線 —— 視為沒有成交
+    // 談到最後仍未達自己可接受的條件 —— 視為沒有成交
     session.outcome = OUTCOME.WALKED_AWAY;
   }
 }
 
 // GET /api/negotiation/scenarios
 // 回傳可選職位清單。走 listScenarios() 的白名單投影，
-// 絕不直接吐 scenarios 物件 —— 那會把每個職位的 internalMax 一次送進瀏覽器。
+// 絕不直接吐 scenarios 物件 —— 那會把每個職位的 internalLimit 一次送進瀏覽器。
 router.get('/negotiation/scenarios', (req, res) => {
   res.json({ items: listScenarios() });
 });
@@ -57,9 +76,11 @@ router.get('/negotiation/scenarios', (req, res) => {
 // 這樣即使 LLM 尚未設定，Avatar 也能先把場景說出來。
 router.post('/negotiation/start', (req, res) => {
   try {
-    const { scenarioId } = req.body || {};
-    const session = createNegotiation(scenarioId || 'salary-junior-swe');
-    const scenario = getScenario(session.scenarioId);
+    const { scenarioId, custom } = req.body || {};
+    // custom 存在時走自訂情境：授權極限由 server 從目標與底線推導，
+    // 不接受使用者提供——連底價都自己填的話就沒有談判可言了。
+    const session = createNegotiation(custom || scenarioId || 'salary-junior-swe');
+    const scenario = scenarioOf(session);
 
     // 開場白由情境自帶：求職與接案的用語不同（「起薪／每月」對接案是錯的），
     // 寫死在這裡的話，每加一個非求職情境就會講出不合場景的話。
@@ -105,7 +126,7 @@ router.post('/negotiation/respond', async (req, res) => {
       return res.status(409).json({ error: '這場談判已結束', state: toClient(session) });
     }
 
-    const scenario = getScenario(session.scenarioId);
+    const scenario = scenarioOf(session);
     const userMessage = message.trim();
 
     const result = await negotiate(session, scenario, userMessage);

@@ -48,6 +48,22 @@
                 <option value="">載入中...</option>
               </select>
             </label>
+            <form class="custom-form" id="customForm" hidden>
+              <label>你的身分<input type="text" id="cfRole" maxlength="40" placeholder="例如：買方" required></label>
+              <label>對方身分<input type="text" id="cfAvatarRole" maxlength="40" placeholder="例如：房仲" required></label>
+              <label>方向
+                <select id="cfDirection">
+                  <option value="up">我要爭取更高的金額</option>
+                  <option value="down">我要把價格壓低</option>
+                </select>
+              </label>
+              <label>情境說明<textarea id="cfContext" maxlength="200" rows="2" placeholder="對方是誰、你為什麼在談這件事" required></textarea></label>
+              <label>對方開價<input type="number" id="cfInitial" min="1" step="1000" required></label>
+              <label>你的目標<input type="number" id="cfTarget" min="1" step="1000" required></label>
+              <label>你的底線<input type="number" id="cfFloor" min="1" step="1000" required></label>
+              <label>回合數<input type="number" id="cfRounds" min="3" max="10" value="6"></label>
+              <p class="custom-hint" id="customHint">對方的讓步空間由系統決定，你不會知道確切底價。</p>
+            </form>
             <button type="button" id="startBtn" disabled>開始談判</button>
             <button type="button" id="testSpeechBtn" class="ghost" disabled>🔊 測試固定語句</button>
           </div>

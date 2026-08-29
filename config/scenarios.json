@@ -3,12 +3,13 @@
     "id": "salary-junior-swe",
     "name": "Junior Software Engineer",
     "role": "Junior Software Engineer",
+    "direction": "up",
     "avatarRole": "HR Manager",
     "currency": "NT$",
     "initialOffer": 45000,
     "candidateTarget": 55000,
     "candidateFloor": 50000,
-    "internalMax": 52000,
+    "internalLimit": 52000,
     "maxRounds": 6,
     "concessions": {
       "signingBonus": {
@@ -41,12 +42,13 @@
     "id": "salary-senior-swe",
     "name": "Senior Software Engineer",
     "role": "Senior Software Engineer",
+    "direction": "up",
     "avatarRole": "Engineering Director",
     "currency": "NT$",
     "initialOffer": 85000,
     "candidateTarget": 110000,
     "candidateFloor": 95000,
-    "internalMax": 105000,
+    "internalLimit": 105000,
     "maxRounds": 6,
     "concessions": {
       "signingBonus": {
@@ -79,12 +81,13 @@
     "id": "salary-product-manager",
     "name": "Product Manager",
     "role": "Product Manager",
+    "direction": "up",
     "avatarRole": "VP of Product",
     "currency": "NT$",
     "initialOffer": 70000,
     "candidateTarget": 90000,
     "candidateFloor": 78000,
-    "internalMax": 86000,
+    "internalLimit": 86000,
     "maxRounds": 6,
     "concessions": {
       "signingBonus": {
@@ -117,12 +120,13 @@
     "id": "freelance-project-quote",
     "name": "接案報價（網站專案）",
     "role": "自由接案工程師",
+    "direction": "up",
     "avatarRole": "客戶方採購窗口",
     "currency": "NT$",
     "initialOffer": 120000,
     "candidateTarget": 200000,
     "candidateFloor": 160000,
-    "internalMax": 180000,
+    "internalLimit": 180000,
     "maxRounds": 5,
     "concessions": {
       "milestonePayment": {
@@ -150,5 +154,44 @@
       "rounds": "最多 5 回合。"
     },
     "opening": "謝謝你提案。這個網站專案我們這邊抓的預算是 {currency}{offer}，是一次性的專案金額。你那邊的報價和考量是什麼？"
+  },
+  "used-car-purchase": {
+    "id": "used-car-purchase",
+    "name": "買二手車",
+    "role": "買家",
+    "direction": "down",
+    "avatarRole": "中車行銷售顧問",
+    "currency": "NT$",
+    "initialOffer": 580000,
+    "candidateTarget": 480000,
+    "candidateFloor": 520000,
+    "internalLimit": 505000,
+    "maxRounds": 5,
+    "concessions": {
+      "warranty": {
+        "label": "延長保固",
+        "cost": 2
+      },
+      "accessories": {
+        "label": "配件（隔熱紙／行車紀錄器）",
+        "cost": 1
+      },
+      "inspection": {
+        "label": "第三方認證檢驗",
+        "cost": 1
+      },
+      "plateFee": {
+        "label": "代辦規費全含",
+        "cost": 1
+      }
+    },
+    "opening": "這台車況很好，里程數也漂亮。我們開的價格是 {currency}{offer}，這個價格已經含了基本整備。",
+    "briefing": {
+      "title": "買二手車：跟業務談價",
+      "context": "你看中一台二手車，銷售顧問開價偏高，你要把價格談下來。",
+      "yourGoal": "目標成交價 NT$480,000，你最多只能接受 NT$520,000。",
+      "openingOffer": "對方開價 NT$580,000。",
+      "rounds": "最多 5 回合。"
+    }
   }
 }

@@ -23,6 +23,7 @@ const launchOverlay = document.getElementById('launchOverlay');
 const testSpeechBtn = document.getElementById('testSpeechBtn');
 const startBtn = document.getElementById('startBtn');
 const scenarioSelect = document.getElementById('scenarioSelect');
+const customForm = document.getElementById('customForm');
 const scenarioTitle = document.getElementById('scenarioTitle');
 const briefing = document.getElementById('briefing');
 const stats = document.getElementById('stats');
@@ -200,6 +201,34 @@ async function playReaction(reaction) {
  * 載入可選情境。清單來自 server 的白名單投影，
  * 前端只認 id，不自行保存任何談判參數。
  */
+const CUSTOM_ID = '__custom__';
+
+function syncCustomForm() {
+  customForm.hidden = scenarioSelect.value !== CUSTOM_ID;
+}
+
+/**
+ * 讀出自訂表單。空白與型別在這裡只做基本檢查，
+ * 真正的規則（順序、範圍、授權極限推導）一律由 server 判斷 ——
+ * 前端擋不住直接打 API 的人，重複一套規則只會兩邊漂移。
+ */
+function readCustomForm() {
+  const num = (el) => {
+    const v = Number(el.value);
+    return Number.isFinite(v) ? v : NaN;
+  };
+  return {
+    role: document.getElementById('cfRole').value.trim(),
+    avatarRole: document.getElementById('cfAvatarRole').value.trim(),
+    direction: document.getElementById('cfDirection').value,
+    context: document.getElementById('cfContext').value.trim(),
+    initialOffer: num(document.getElementById('cfInitial')),
+    candidateTarget: num(document.getElementById('cfTarget')),
+    candidateFloor: num(document.getElementById('cfFloor')),
+    maxRounds: num(document.getElementById('cfRounds'))
+  };
+}
+
 async function loadScenarios() {
   const data = await fetchJson('/api/negotiation/scenarios');
   const items = data.items ?? [];
@@ -212,6 +241,11 @@ async function loadScenarios() {
     opt.textContent = `${item.name}（${item.currency}${item.initialOffer.toLocaleString('zh-TW')} 起）`;
     scenarioSelect.appendChild(opt);
   }
+
+  const customOpt = document.createElement('option');
+  customOpt.value = CUSTOM_ID;
+  customOpt.textContent = '✏️ 自訂情境...';
+  scenarioSelect.appendChild(customOpt);
 
   if (items.length > 0) {
     scenarioSelect.value = items[0].id;
@@ -299,12 +333,15 @@ async function startNegotiation() {
 
   try {
     // 沒選時傳 undefined，由 server 用預設情境，不要讓沒選就壞掉
-    const scenarioId = scenarioSelect.value || undefined;
+    const isCustom = scenarioSelect.value === CUSTOM_ID;
+    const payload = isCustom
+      ? { custom: readCustomForm() }
+      : { scenarioId: scenarioSelect.value || undefined };
 
     const data = await fetchJson('/api/negotiation/start', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scenarioId })
+      body: JSON.stringify(payload)
     });
 
     scenarioTitle.textContent = data.briefing.title;
@@ -328,12 +365,13 @@ async function startNegotiation() {
     startBtn.disabled = false;
     // 談判進行中不可換情境：換了會與 server 上那場 session 不一致
     scenarioSelect.disabled = true;
+    customForm.hidden = true;
 
     await speak(data.reply);
   } catch (error) {
     console.error('開始談判失敗:', error);
     showError('開始談判失敗: ' + error.message);
-    startBtn.textContent = '重試開始';
+    startBtn.textContent = negotiation ? '重新開始' : '重試開始';
     startBtn.disabled = false;
   }
 }
@@ -364,6 +402,7 @@ async function sendResponse(message) {
     if (data.state.ended) {
       setInputEnabled(false);
       scenarioSelect.disabled = false;   // 談完可以換下一個情境
+      syncCustomForm();
       if (data.report) {
         renderReport(data.report);
       } else if (data.reportPending) {
@@ -511,6 +550,7 @@ chatForm.addEventListener('submit', (e) => {
 });
 
 launchBtn.addEventListener('click', launch);
+scenarioSelect.addEventListener('change', syncCustomForm);
 startBtn.addEventListener('click', startNegotiation);
 
 // PRESENTER_STATUS 是 Ready 的唯一真實來源。

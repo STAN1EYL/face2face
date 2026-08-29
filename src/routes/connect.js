@@ -106,7 +106,7 @@ router.get('/avatars', async (req, res) => {
     }
     const data = await getAvatars();
     cache.avatars = data;
-    if (!cache.lastFetch) cache.lastFetch = Date.now();
+    cache.lastFetch = Date.now();
     res.json(data);
   } catch (error) {
     console.error('Error fetching avatars:', error.message);
@@ -140,7 +140,7 @@ router.get('/scenes', async (req, res) => {
     }
     const data = await getScenes();
     cache.scenes = data;
-    if (!cache.lastFetch) cache.lastFetch = Date.now();
+    cache.lastFetch = Date.now();
     res.json(data);
   } catch (error) {
     console.error('Error fetching scenes:', error.message);
@@ -155,7 +155,7 @@ router.get('/voices', async (req, res) => {
     }
     const data = await getVoices();
     cache.voices = data;
-    if (!cache.lastFetch) cache.lastFetch = Date.now();
+    cache.lastFetch = Date.now();
     res.json(data);
   } catch (error) {
     console.error('Error fetching voices:', error.message);
