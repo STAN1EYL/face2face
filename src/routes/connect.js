@@ -10,6 +10,7 @@ const {
   getScenes,
   getVoices,
   getChatbots,
+  getAvatarMotions,
   createPresentation,
   getPublishableKey
 } = require('../services/perxona');
@@ -110,6 +111,19 @@ router.get('/avatars', async (req, res) => {
   } catch (error) {
     console.error('Error fetching avatars:', error.message);
     res.status(500).json({ error: '無法取得 Avatar 清單' });
+  }
+});
+
+// GET /api/avatars/:avatarId/motions
+// §24：reaction 要映射到 Motion ID 時，只能用這支拿到的清單。
+// Motion ID 不在該 avatar 的 catalog 裡就不會播，所以絕不自行發明。
+router.get('/avatars/:avatarId/motions', async (req, res) => {
+  try {
+    const data = await getAvatarMotions(req.params.avatarId);
+    res.json(data);
+  } catch (error) {
+    console.error('Error fetching motions:', error.message);
+    res.status(500).json({ error: '無法取得 Motion 清單' });
   }
 });
 

@@ -44,9 +44,8 @@ let isProcessing = false;
 
 // 談判狀態：整份由 server 給，前端只讀
 let negotiation = null;       // 最近一次 server 回傳的 state
-let currentReaction = null;   // §24：只保存 semantic reaction，不映射 Motion ID
-                              // 要映射必須先查 GET /assets/avatars/:id/motions 取得該
-                              // avatar 實際支援的清單，絕不自行發明 Motion ID。
+let currentReaction = null;   // §24：LLM 只輸出 semantic reaction
+let motionByPose = {};        // pose tag -> 該 avatar 實際的 motion_id
 
 // ==================== 工具 ====================
 
@@ -122,6 +121,64 @@ async function preload() {
   }
 
   await loadScenarios();
+  await loadMotions();
+}
+
+/**
+ * §24 Motion 映射。
+ *
+ * Motion ID 是綁 avatar 的（tags 裡有 skeleton:f_cc092），換一個 avatar 就全部失效，
+ * 所以這裡寫死的是 pose tag，實際 ID 一律從該 avatar 的 catalog 查出來。
+ * 查不到就不播 —— 發明一個 ID 只會靜默不播，比不播更難查。
+ */
+async function loadMotions() {
+  motionByPose = {};
+  try {
+    const data = await fetchJson(`/api/avatars/${encodeURIComponent(selectedAvatarId)}/motions?page=1&size=100`);
+    for (const m of data.items ?? []) {
+      const pose = (m.tags ?? []).find(t => t.startsWith('pose:'));
+      if (pose && m.motion_id) {
+        motionByPose[pose.slice('pose:'.length)] = m.motion_id;
+      }
+    }
+    console.log('Motion catalog:', Object.keys(motionByPose).join(', ') || '(空)');
+  } catch (error) {
+    // 沒有 motion 只是少了表情動作，不該讓整個 Avatar 起不來
+    console.warn('Motion 清單取得失敗，將不播放動作:', error.message);
+  }
+}
+
+// reaction -> 偏好的 pose，依序取第一個該 avatar 真的有的。
+// 都沒有就不播，不退回猜測。
+const REACTION_POSES = {
+  positive:  ['talking_02', 'talking_01'],
+  skeptical: ['idle_02', 'listening_01'],
+  firm:      ['talking_03', 'idle_02'],
+  surprised: ['talking_01', 'talking_02'],
+  neutral:   ['idle_01', 'talking_01']
+};
+
+function resolveeMotion(reaction) {
+  for (const pose of REACTION_POSES[reaction] ?? []) {
+    if (motionByPose[pose]) return { pose, motionId: motionByPose[pose] };
+  }
+  return null;
+}
+
+/**
+ * 播放 reaction 對應的動作。與語音佇列獨立，不 await 說話。
+ */
+async function playReaction(reaction) {
+  const resolved = resolveMotion(reaction);
+  if (!resolved) return;
+  try {
+    const result = await presenter.playMotion(resolved.motionId);
+    if (result && result.success === false) {
+      console.warn('playMotion 失敗:', resolved.pose, result.code, result.message);
+    }
+  } catch (error) {
+    console.warn('playMotion 例外:', error.message);
+  }
 }
 
 /**
@@ -252,6 +309,7 @@ async function startNegotiation() {
     setInputEnabled(true);
     userInput.focus();
     startBtn.textContent = '重新開始';
+    playReaction(data.reaction);
     startBtn.disabled = false;
     // 談判進行中不可換情境：換了會與 server 上那場 session 不一致
     scenarioSelect.disabled = true;
@@ -285,6 +343,7 @@ async function sendResponse(message) {
     currentReaction = data.reaction;
     addMessage(data.reply, 'bot');
 
+    playReaction(data.reaction);
     await speak(data.reply);
 
     if (data.state.ended) {
