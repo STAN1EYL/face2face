@@ -605,10 +605,58 @@ const STATUS_LABEL = {
   Ready: '就緒'
 };
 
+/**
+ * 鏡頭取景。人物在畫面上的大小是這裡決定的，不是容器尺寸——
+ * Presenter 預設的垂直 FOV 是 90°，人物會被拉得很遠，
+ * 容器再大也只是多出空白。
+ * distance 越小越靠近人物；官方 motion-browser 用的是 distance: 1。
+ */
+const CAMERA = { distance: 0.55, vertical: 0, horizontal: 4.5 };
+
+function applyCameraFraming() {
+  if (typeof presenter.updateCameraFOV !== 'function') {
+    console.warn('這版 Presenter 沒有 updateCameraFOV，維持預設取景');
+    return;
+  }
+  presenter.updateCameraFOV({ ...CAMERA });
+  console.log('鏡頭取景已套用:', CAMERA);
+}
+
+/**
+ * 逼 canvas 重算縮放。
+ *
+ * Presenter 內部靠 ResizeObserver 調整 canvas 比例，但元素從隱藏變可見
+ * 之後尺寸就不再變動，那段邏輯不會再觸發，canvas 會保留舊的縮放。
+ * 把寬度推一個像素再推回來，製造一次真實的尺寸變化。
+ * 兩次修改各自放在自己的 rAF（巢狀），確保瀏覽器會在兩者之間
+ * 送出 ResizeObserver 通知。
+ */
+function nudgePresenterSize() {
+  requestAnimationFrame(() => {
+    presenter.style.width = 'calc(100% - 1px)';
+    requestAnimationFrame(() => {
+      presenter.style.width = '100%';
+    });
+  });
+}
+
+// 視窗改變大小時 canvas 同樣需要重算
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+  if (!isReady) return;
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(nudgePresenterSize, 200);
+});
+
 presenter.addEventListener('PRESENTER_STATUS', (e) => {
   const presenterStatus = e.detail.status;
   console.log('Presenter status:', presenterStatus);
   isReady = presenterStatus === 'Ready';
+
+  if (isReady) {
+    applyCameraFraming();
+    nudgePresenterSize();
+  }
   status.textContent = STATUS_LABEL[presenterStatus] || presenterStatus;
   testSpeechBtn.disabled = !isReady;
   startBtn.disabled = !isReady;
